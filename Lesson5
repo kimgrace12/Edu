@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이미지와 함께하는 단어 벽돌 집 짓기</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        h1 { color: #2c3e50; margin-bottom: 5px; }
+
+        .game-container {
+            display: flex;
+            gap: 25px;
+            max-width: 850px;
+            width: 100%;
+            background: white;
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+            margin-top: 10px;
+        }
+
+        /* 왼쪽: 퀴즈 영역 */
+        .quiz-box {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .question-title {
+            font-size: 0.95rem;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+
+        .word-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .question-word {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .audio-btn {
+            background: #e8f4fd;
+            border: 2px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s, background 0.2s;
+        }
+
+        .audio-btn:hover { background: #d4eafc; transform: scale(1.05); }
+
+        /* 힌트 이미지 스타일 */
+        .hint-img-container {
+            width: 100%;
+            height: 160px;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+        }
+
+        .hint-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .option-btn {
+            padding: 10px 15px;
+            font-size: 0.95rem;
+            background-color: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .option-btn:hover {
+            background-color: #e8f4fd;
+            border-color: #3498db;
+            color: #2980b9;
+        }
+
+        /* 오른쪽: 완성형 벽돌 건물 영역 */
+        .building-stage {
+            width: 220px;
+            height: 420px;
+            background-color: #eef2f5;
+            border-bottom: 8px solid #7f8c8d;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 10px;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        /* 완성 시 나타나는 빨간 지붕 */
+        .roof {
+            width: 0;
+            height: 0;
+            border-left: 95px solid transparent;
+            border-right: 95px solid transparent;
+            border-bottom: 45px solid #e74c3c;
+            display: none;
+            margin-bottom: 2px;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        /* 벽돌 격자 프레임 */
+        .brick-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 4px;
+            width: 180px;
+        }
+
+        .brick {
+            height: 36px;
+            background: linear-gradient(135deg, #e67e22, #d35400);
+            border-radius: 4px;
+            border: 1px solid #b9770e;
+            box-shadow: inset 0 2px 0 rgba(255,255,255,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8rem;
+            font-weight: bold;
+            visibility: hidden;
+        }
+
+        .brick.active {
+            visibility: visible;
+            animation: dropBrick 0.3s ease-out;
+        }
+
+        @keyframes dropBrick {
+            0% { transform: translateY(-50px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes fadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        .msg-box {
+            margin-top: 10px;
+            font-weight: bold;
+            min-height: 20px;
+            text-align: center;
+        }
+
+        /* 결과 화면 */
+        .result-screen {
+            text-align: center;
+            display: none;
+            width: 100%;
+        }
+
+        .restart-btn {
+            padding: 12px 25px;
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        .restart-btn:hover { background-color: #27ae60; }
+    </style>
+</head>
+<body>
+
+    <h1>단어 벽돌 집 짓기 🏠</h1>
+    <p style="color: #7f8c8d; margin-top: 0;">이미지를 보고 알맞은 뜻을 맞춰 예쁜 집을 완공해보세요!</p>
+
+    <div class="game-container">
+        <!-- 퀴즈 영역 -->
+        <div class="quiz-box" id="quiz-box">
+            <div>
+                <div class="question-title" id="q-number">문제 1 / 10</div>
+                <div class="word-header">
+                    <div class="question-word" id="q-word">Word</div>
+                    <button class="audio-btn" onclick="playAudio()" title="발음 듣기">🔊</button>
+                </div>
+                <!-- 힌트 이미지 영역 -->
+                <div class="hint-img-container">
+                    <img id="q-img" class="hint-img" src="" alt="단어 이미지 힌트">
+                </div>
+            </div>
+
+            <div>
+                <div class="options-container" id="options"></div>
+                <div class="msg-box" id="msg"></div>
+            </div>
+        </div>
+
+        <!-- 결과 화면 -->
+        <div class="result-screen" id="result-screen">
+            <h2>🎉 멋진 벽돌 집 완공!</h2>
+            <p>10개의 벽돌을 모두 맞혀 단단한 집을 만들었습니다!</p>
+            <button class="restart-btn" onclick="startGame()">다시 도전하기</button>
+        </div>
+
+        <!-- 벽돌 건물 영역 -->
+        <div class="building-stage">
+            <div class="roof" id="roof"></div>
+            <div class="brick-grid" id="brick-grid">
+                <!-- 5층 x 2개 = 총 10개의 공간 (아래부터 차곡차곡 쌓임) -->
+                <div class="brick" id="b-9">🧱 5층</div>
+                <div class="brick" id="b-10">🧱 5층</div>
+                <div class="brick" id="b-7">🧱 4층</div>
+                <div class="brick" id="b-8">🧱 4층</div>
+                <div class="brick" id="b-5">🧱 3층</div>
+                <div class="brick" id="b-6">🧱 3층</div>
+                <div class="brick" id="b-3">🧱 2층</div>
+                <div class="brick" id="b-4">🧱 2층</div>
+                <div class="brick" id="b-1">🧱 1층</div>
+                <div class="brick" id="b-2">🧱 1층</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 이미지 직링크가 포함된 단어 데이터
+        const wordData = [
+            { word: "catch a cold", meaning: "감기에 걸리다", img: "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=500&q=80" },
+            { word: "dress", meaning: "옷을 입다", img: "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=500&q=80" },
+            { word: "temperature", meaning: "온도", img: "https://images.unsplash.com/photo-1516834474-48c0abc2a902?w=500&q=80" },
+            { word: "fall asleep", meaning: "잠에 들다", img: "https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?w=500&q=80" },
+            { word: "chemical", meaning: "화학 물질", img: "https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?w=500&q=80" },
+            { word: "amount", meaning: "양", img: "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=500&q=80" },
+            { word: "fairly", meaning: "상당히", img: "https://images.unsplash.com/photo-1509114397022-ed747cca3f65?w=500&q=80" },
+            { word: "height", meaning: "키, 높이", img: "https://images.unsplash.com/photo-1517649763962-0c623266010b?w=500&q=80" },
+            { word: "measure", meaning: "측정하다", img: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=500&q=80" },
+            { word: "according to", meaning: "~에 따르면", img: "https://images.unsplash.com/photo-1455390582262-044cdead277a?w=500&q=80" }
+        ];
+
+        let quizList = [];
+        let currentIdx = 0;
+        let score = 0;
+
+        // 원어민 음성(TTS) 재생 함수
+        function playAudio() {
+            if ('speechSynthesis' in window) {
+                const currentWord = quizList[currentIdx].word;
+                const utterance = new SpeechSynthesisUtterance(currentWord);
+                utterance.lang = 'en-US';
+                utterance.rate = 0.8;
+                window.speechSynthesis.cancel();
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function startGame() {
+            quizList = [...wordData].sort(() => Math.random() - 0.5);
+            currentIdx = 0;
+            score = 0;
+            
+            // 벽돌 숨기기 및 초기화
+            for (let i = 1; i <= 10; i++) {
+                const brick = document.getElementById(`b-${i}`);
+                brick.classList.remove('active');
+            }
+            document.getElementById('roof').style.display = 'none';
+
+            document.getElementById('quiz-box').style.display = 'flex';
+            document.getElementById('result-screen').style.display = 'none';
+            document.getElementById('msg').textContent = '';
+
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            document.getElementById('msg').textContent = '';
+            const current = quizList[currentIdx];
+            document.getElementById('q-number').textContent = `문제 ${currentIdx + 1} / ${quizList.length}`;
+            document.getElementById('q-word').textContent = current.word;
+            document.getElementById('q-img').src = current.img;
+
+            // 문제 전환 시 단어 음성 자동 재생
+            setTimeout(() => { playAudio(); }, 200);
+
+            // 보기 설정
+            let options = [current.meaning];
+            let otherMeanings = wordData
+                .filter(item => item.meaning !== current.meaning)
+                .map(item => item.meaning)
+                .sort(() => Math.random() - 0.5);
+
+            options.push(otherMeanings[0], otherMeanings[1]);
+            options.sort(() => Math.random() - 0.5);
+
+            const optionsDiv = document.getElementById('options');
+            optionsDiv.innerHTML = '';
+            
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.textContent = opt;
+                btn.onclick = () => selectAnswer(opt, current.meaning);
+                optionsDiv.appendChild(btn);
+            });
+        }
+
+        function selectAnswer(selected, correct) {
+            const msgEl = document.getElementById('msg');
+            
+            if (selected === correct) {
+                msgEl.style.color = '#27ae60';
+                msgEl.textContent = '정답입니다! 🧱 벽돌 하나 완공!';
+                
+                score++;
+                const currentBrick = document.getElementById(`b-${score}`);
+                if (currentBrick) {
+                    currentBrick.classList.add('active');
+                }
+
+                setTimeout(() => {
+                    currentIdx++;
+                    if (currentIdx < quizList.length) {
+                        loadQuestion();
+                    } else {
+                        endGame();
+                    }
+                }, 800);
+            } else {
+                msgEl.style.color = '#e74c3c';
+                msgEl.textContent = '틀렸습니다! 이미지를 다시 보고 시도해 보세요.';
+            }
+        }
+
+        function endGame() {
+            document.getElementById('roof').style.display = 'block';
+            document.getElementById('quiz-box').style.display = 'none';
+            document.getElementById('result-screen').style.display = 'block';
+        }
+
+        // 게임 실행
+        startGame();
+    </script>
+
+</body>
+</html>
